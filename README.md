@@ -2,7 +2,7 @@
 
 ## Assignment 2: The Deep Space File Transfer Protocol (DS-FTP)
 
-**Due:** **Monday, March 9, 2026 at 11:59 PM**  
+**Due:** **Friday, March 6, 2026 at 11:59 PM**  
 **Language:** Java (UDP – `DatagramSocket` API)  
 **Late Policy:** As stated in the course syllabus
 
