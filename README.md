@@ -308,13 +308,30 @@ Transmit in this order:
 
 * * *
 
-## 11\. Submission Requirements
+## 11\. Provided Starter Code
+
+To ensure consistency across implementations and grading, the following starter utilities are **provided and must be used without modification**:
+
+- `DSPacket.java` — Enforces the 128-byte packet contract and sequence handling
+    
+- `ChaosEngine.java` — Standardizes ACK loss and packet permutation behavior
+    
+
+These files are available at:  
+**https://github.com/MustafaDaraghmeh/CP372_DS-FTP**
+
+Students must include these files **unchanged** in their Sender and Receiver directories. Any deviation from the provided logic may result in incorrect protocol behavior and grading penalties.
+
+* * *
+
+## 12\. Submission Requirements
 
 ### Code (ZIP)
 
 - File name: `CP372_A2_Group_#ID.zip`
     
 - Two directories:
+    
     ```
     /Sender/
     ├── DSPacket.java
@@ -324,8 +341,8 @@ Transmit in this order:
     ├── DSPacket.java
     ├── ChaosEngine.java
     └── Receiver.java
-    ```  
-        
+    ```
+    
 - **Only `.java` files**
     
 - **Default package only**
@@ -359,10 +376,44 @@ Include:
         
 3.  Each result averaged over **3 runs**
     
+***
+
+### Video Demonstration (Mandatory)
+
+Each group must submit a **screen-recorded video demo (maximum 5 minutes)** showing their DS-FTP implementation in action.
+
+The video **must clearly demonstrate**:
+
+1.  Successful handshake (SOT → ACK)
+    
+2.  File transfer using:
+    
+    - Stop-and-Wait
+        
+    - Go-Back-N
+        
+3.  Correct handling of at least **one ACK loss** (RN > 0)
+    
+4.  Proper connection teardown (EOT → ACK)
+    
+The demo should include:
+
+- Running the **Receiver** and **Sender** from the command line
+    
+- Console output showing sequence numbers and ACK behavior
+    
+- Confirmation that the output file matches the input file
+    
+
+**Time limit:** 5 minutes (strict).  
+**Format:** MP4 or a shareable link (e.g., OneDrive, Google Drive).  
+**Submission:** Upload the video or link via **MyLS → Assignment 2 Dropbox**.
+
+**Important:** Failure to submit a video demo will result in a **−20% penalty** on the Assignment 2 grade, regardless of code or report quality.
 
 * * *
 
-## 12\. Academic Integrity
+## 13\. Academic Integrity
 
 - All submitted code must be **your own**
     
