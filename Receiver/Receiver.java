@@ -5,8 +5,8 @@ import java.util.*;
 import java.io.*;
 
 public class Receiver {
-    int expectedSeqNum = 0;
-    int ackCount = 0; // to be used with the ChaosEngine
+    static int expectedSeqNum = 0;
+    static int ackCount = 0; // to be used with the ChaosEngine
     private static volatile boolean handshakeCompleted = false;
     private static volatile boolean running = true;
 
@@ -39,6 +39,11 @@ public class Receiver {
 
                     DSPacket packet = new DSPacket(buffer);
                     byte packetType = packet.getType();
+                    int packetSeqNum = packet.getSeqNum();
+
+                    if (packetType == DSPacket.TYPE_SOT && packetSeqNum == 0) {
+                        ackCount++;
+                    }
                 }
                 
             } catch (IOException e) {
