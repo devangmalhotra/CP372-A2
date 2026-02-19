@@ -32,7 +32,7 @@ public class Receiver {
             try {
                 FileOutputStream fos = new FileOutputStream(argv[3]);
 
-                while(!handshakeCompleted) {
+                while(!handshakeCompleted) { // just for first packet
                     byte[] buffer = new byte[128]; // since each UDP datagram should be 128 bytes
                     DatagramPacket dp = new DatagramPacket(buffer, buffer.length);
                     datagramSocket.receive(dp);
@@ -58,6 +58,16 @@ public class Receiver {
                         expectedSeqNum = 1;
 
                     }
+                }
+
+                while(running) {
+                    byte[] buffer = new byte[128]; // since each UDP datagram should be 128 bytes
+                    DatagramPacket dp = new DatagramPacket(buffer, buffer.length);
+                    datagramSocket.receive(dp);
+
+                    DSPacket packet = new DSPacket(buffer);
+                    byte packetType = packet.getType();
+                    int packetSeqNum = packet.getSeqNum();
                 }
                 
             } catch (IOException e) {
