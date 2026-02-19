@@ -42,7 +42,21 @@ public class Receiver {
                     int packetSeqNum = packet.getSeqNum();
 
                     if (packetType == DSPacket.TYPE_SOT && packetSeqNum == 0) {
+                        DSPacket newPacket = new DSPacket(DSPacket.TYPE_ACK, 0, null);
                         ackCount++;
+
+                        // Checking if packet should be dropped with ChaosEngine
+                        int rn = Integer.parseInt(argv[4]);
+                        boolean shouldDropResult = ChaosEngine.shouldDrop(ackCount, rn);
+
+                        if (!shouldDropResult) {
+                            byte [] dataBytes = newPacket.toBytes();
+                            DatagramPacket ackDatagramPacket = new DatagramPacket(dataBytes, dataBytes.length, InetAddress.getByName(argv[0]), Integer.parseInt(argv[1]));
+                            datagramSocket.send(ackDatagramPacket);
+                        }
+                        handshakeCompleted = true;
+                        expectedSeqNum = 1;
+
                     }
                 }
                 
