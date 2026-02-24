@@ -64,10 +64,43 @@ public class Receiver {
                     byte[] buffer = new byte[128]; // since each UDP datagram should be 128 bytes
                     DatagramPacket dp = new DatagramPacket(buffer, buffer.length);
                     datagramSocket.receive(dp);
+                    ackCount++; // needs to be done for all packets regardless of type
 
                     DSPacket packet = new DSPacket(buffer);
                     byte packetType = packet.getType();
                     int packetSeqNum = packet.getSeqNum();
+
+                    if (packetType == DSPacket.TYPE_DATA) {
+                        if(packetSeqNum == expectedSeqNum) {
+                            fos.write(packet.getPayload());
+                            expectedSeqNum = (expectedSeqNum + 1) % 128; // since it needs to wrap around
+                        }
+
+                        // Checking if packet should be dropped with ChaosEngine
+                        int rn = Integer.parseInt(argv[4]);
+                        boolean shouldDropResult = ChaosEngine.shouldDrop(ackCount, rn);
+
+                        if (!shouldDropResult) {
+                            DSPacket packetWithAck = new DSPacket(DSPacket.TYPE_ACK, packetSeqNum, null);
+                            byte [] dataBytes = packetWithAck.toBytes();
+                            DatagramPacket ackDatagramPacket = new DatagramPacket(dataBytes, dataBytes.length, InetAddress.getByName(argv[0]), Integer.parseInt(argv[1]));
+                            datagramSocket.send(ackDatagramPacket);
+                        }
+                    } else if (packetType == DSPacket.TYPE_EOT) {
+                        // Checking if packet should be dropped with ChaosEngine
+                        int rn = Integer.parseInt(argv[4]);
+                        boolean shouldDropResult = ChaosEngine.shouldDrop(ackCount, rn);
+
+                        if (!shouldDropResult) {
+                            DSPacket packetWithAck = new DSPacket(DSPacket.TYPE_ACK, packetSeqNum, null);
+                            byte [] dataBytes = packetWithAck.toBytes();
+                            DatagramPacket ackDatagramPacket = new DatagramPacket(dataBytes, dataBytes.length, InetAddress.getByName(argv[0]), Integer.parseInt(argv[1]));
+                            datagramSocket.send(ackDatagramPacket);
+                        }
+                        running = false;
+                        fos.close();
+                    }
+
                 }
                 
             } catch (IOException e) {
