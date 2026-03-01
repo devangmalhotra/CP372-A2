@@ -35,20 +35,34 @@ public class Sender {
                 DSPacket packetToSend = new DSPacket(DSPacket.TYPE_SOT, 0, null);
                 byte [] dataBytes = packetToSend.toBytes();
                 DatagramPacket datagramForSot = new DatagramPacket(dataBytes, dataBytes.length, InetAddress.getByName(argv[0]), Integer.parseInt(argv[1]));
-                datagramSocket.send(datagramForSot);
+
+                int timeoutTimerHandshake = 0;
 
                 while(!handshakeCompleted) {
-                    byte[] buffer = new byte[128]; // since each UDP datagram should be 128 bytes
-                    DatagramPacket dp = new DatagramPacket(buffer, buffer.length);
-                    datagramSocket.receive(dp);
+                    datagramSocket.send(datagramForSot);
 
-                    DSPacket packet = new DSPacket(buffer);
-                    byte packetType = packet.getType();
-                    int packetSeqNum = packet.getSeqNum();
+                    try {
+                        byte[] buffer = new byte[128]; // since each UDP datagram should be 128 bytes
+                        DatagramPacket dp = new DatagramPacket(buffer, buffer.length);
+                        datagramSocket.receive(dp);
 
-                    if (packetType == DSPacket.TYPE_ACK && packetSeqNum == 0) {
-                        handshakeCompleted = true;
+                        DSPacket packet = new DSPacket(buffer);
+                        byte packetType = packet.getType();
+                        int packetSeqNum = packet.getSeqNum();
+
+                        if (packetType == DSPacket.TYPE_ACK && packetSeqNum == 0) {
+                            handshakeCompleted = true;
+                        }
+                    } catch (SocketTimeoutException e) {
+                        timeoutTimerHandshake++;
+
+                        if (timeoutTimerHandshake == 3) { //max reached
+                            fis.close();
+                            datagramSocket.close();
+                            return;
+                        }
                     }
+                    
                 }
 
                 // Sending data after handshake has been completed
@@ -101,6 +115,39 @@ public class Sender {
                 DSPacket packetForEOT = new DSPacket(DSPacket.TYPE_EOT, expectedSeqNum, null);
                 byte[] bytesForEOT = packetForEOT.toBytes();
 
+                DatagramPacket datagramForEOT = new DatagramPacket(bytesForEOT, bytesForEOT.length, InetAddress.getByName(argv[0]), Integer.parseInt(argv[1]));
+
+                boolean eotAckSuccessful = false;
+                int timeoutTimer = 0;
+
+                while(!eotAckSuccessful) {
+                    datagramSocket.send(datagramForEOT);
+
+                    try {
+                        byte[] bufferForEOT = new byte[128];
+                        DatagramPacket dpForEOT= new DatagramPacket(bufferForEOT, bufferForEOT.length);
+
+                        datagramSocket.receive(dpForEOT);
+
+                        DSPacket packetForAck = new DSPacket(bufferForEOT);
+                        int ackPacketSeqNum = packetForAck.getSeqNum();
+                        byte ackPacketType = packetForAck.getType();
+
+                        if (ackPacketType == DSPacket.TYPE_ACK && ackPacketSeqNum == expectedSeqNum) {
+                            eotAckSuccessful = true;
+                        }
+                        
+
+                    } catch (SocketTimeoutException e) {
+                        timeoutTimer++;
+
+                        if (timeoutTimer == 3) { //max reached
+                            fis.close();
+                            datagramSocket.close();
+                            return;
+                        }
+                    }
+                }
                 
                 fis.close();
                 datagramSocket.close();

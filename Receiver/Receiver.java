@@ -55,6 +55,7 @@ public class Receiver {
                             datagramSocket.send(ackDatagramPacket);
                             handshakeCompleted = true;
                             expectedSeqNum = 1;
+                            ackCount++;
                         }
 
                     }
@@ -93,7 +94,7 @@ public class Receiver {
                         boolean shouldDropResult = ChaosEngine.shouldDrop(ackCount, rn);
 
                         if (!shouldDropResult) {
-                            DSPacket packetWithAck = new DSPacket(DSPacket.TYPE_ACK, lastDelivered, null);
+                            DSPacket packetWithAck = new DSPacket(DSPacket.TYPE_ACK, packetSeqNum, null);
                             byte [] dataBytes = packetWithAck.toBytes();
                             DatagramPacket ackDatagramPacket = new DatagramPacket(dataBytes, dataBytes.length, InetAddress.getByName(argv[0]), Integer.parseInt(argv[1]));
                             datagramSocket.send(ackDatagramPacket);
