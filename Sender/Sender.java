@@ -5,6 +5,7 @@ import java.io.*;
 public class Sender {
     private static volatile boolean handshakeCompleted = false;
     private static volatile boolean running = true;
+    static int expectedSeqNum = 1;
 
     public static void main(String argv[]) throws Exception {
         // Creating the datagram socket
@@ -25,9 +26,84 @@ public class Sender {
 
         try {
             datagramSocket = new DatagramSocket(port);
+            datagramSocket.setSoTimeout(Integer.parseInt(argv[4]));
 
             try {
                 FileInputStream fis = new FileInputStream(argv[3]);
+
+                // Sending the SOT packet to start handshake
+                DSPacket packetToSend = new DSPacket(DSPacket.TYPE_SOT, 0, null);
+                byte [] dataBytes = packetToSend.toBytes();
+                DatagramPacket datagramForSot = new DatagramPacket(dataBytes, dataBytes.length, InetAddress.getByName(argv[0]), Integer.parseInt(argv[1]));
+                datagramSocket.send(datagramForSot);
+
+                while(!handshakeCompleted) {
+                    byte[] buffer = new byte[128]; // since each UDP datagram should be 128 bytes
+                    DatagramPacket dp = new DatagramPacket(buffer, buffer.length);
+                    datagramSocket.receive(dp);
+
+                    DSPacket packet = new DSPacket(buffer);
+                    byte packetType = packet.getType();
+                    int packetSeqNum = packet.getSeqNum();
+
+                    if (packetType == DSPacket.TYPE_ACK && packetSeqNum == 0) {
+                        handshakeCompleted = true;
+                    }
+                }
+
+                // Sending data after handshake has been completed
+                byte[] bufferforFile = new byte[124]; // since each DATA packet carries exactly 124 bytes (except the final one)
+                int readBytes;
+                boolean emptyFile = (fis.available() == 0);
+
+                if (!emptyFile) {
+                    while((readBytes = fis.read(bufferforFile)) != -1) {
+                        DSPacket packet = new DSPacket(DSPacket.TYPE_DATA, expectedSeqNum, Arrays.copyOf(bufferforFile, readBytes));
+                        byte[] packetBytes = packet.toBytes();
+                        DatagramPacket sendingDatagramPacket = new DatagramPacket(packetBytes, packetBytes.length, InetAddress.getByName(argv[0]), Integer.parseInt(argv[1]));
+
+                        // Now, wait for ack
+                        boolean ackReceivedSuccessfully = false;
+                        int timeoutTimer = 0;
+
+                        while(!ackReceivedSuccessfully) {
+                            datagramSocket.send(sendingDatagramPacket);
+
+                            try {
+                                byte[] bufferForAck = new byte[128];
+                                DatagramPacket dpForAck = new DatagramPacket(bufferForAck, bufferForAck.length);
+                                datagramSocket.receive(dpForAck);
+                                DSPacket packetForAck = new DSPacket(bufferForAck);
+                                
+                                int ackPacketSeqNum = packetForAck.getSeqNum();
+                                byte ackPacketType = packetForAck.getType();
+                                
+                                if(ackPacketSeqNum == expectedSeqNum && ackPacketType == DSPacket.TYPE_ACK) {
+                                    ackReceivedSuccessfully = true;
+                                    expectedSeqNum = (expectedSeqNum + 1) % 128; // since it needs to wrap around
+                                }
+                            } catch (SocketTimeoutException e) {
+                                timeoutTimer++;
+
+                                if (timeoutTimer == 3) { //max reached
+                                    fis.close();
+                                    datagramSocket.close();
+                                    return;
+                                }
+                            }
+                            
+                        }
+
+                    }
+                }
+
+                // EOT if last file
+                DSPacket packetForEOT = new DSPacket(DSPacket.TYPE_EOT, expectedSeqNum, null);
+                byte[] bytesForEOT = packetForEOT.toBytes();
+
+                
+                fis.close();
+                datagramSocket.close();
 
             } catch (Exception e) {
                 System.out.println("An error occurred: " + e.getMessage());

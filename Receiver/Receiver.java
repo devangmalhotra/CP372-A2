@@ -7,6 +7,7 @@ import java.io.*;
 public class Receiver {
     static int expectedSeqNum = 0;
     static int ackCount = 0; // to be used with the ChaosEngine
+    static int lastDelivered = 0;
     private static volatile boolean handshakeCompleted = false;
     private static volatile boolean running = true;
 
@@ -43,7 +44,6 @@ public class Receiver {
 
                     if (packetType == DSPacket.TYPE_SOT && packetSeqNum == 0) {
                         DSPacket newPacket = new DSPacket(DSPacket.TYPE_ACK, 0, null);
-                        ackCount++;
 
                         // Checking if packet should be dropped with ChaosEngine
                         int rn = Integer.parseInt(argv[4]);
@@ -53,9 +53,9 @@ public class Receiver {
                             byte [] dataBytes = newPacket.toBytes();
                             DatagramPacket ackDatagramPacket = new DatagramPacket(dataBytes, dataBytes.length, InetAddress.getByName(argv[0]), Integer.parseInt(argv[1]));
                             datagramSocket.send(ackDatagramPacket);
+                            handshakeCompleted = true;
+                            expectedSeqNum = 1;
                         }
-                        handshakeCompleted = true;
-                        expectedSeqNum = 1;
 
                     }
                 }
@@ -64,7 +64,6 @@ public class Receiver {
                     byte[] buffer = new byte[128]; // since each UDP datagram should be 128 bytes
                     DatagramPacket dp = new DatagramPacket(buffer, buffer.length);
                     datagramSocket.receive(dp);
-                    ackCount++; // needs to be done for all packets regardless of type
 
                     DSPacket packet = new DSPacket(buffer);
                     byte packetType = packet.getType();
@@ -73,6 +72,7 @@ public class Receiver {
                     if (packetType == DSPacket.TYPE_DATA) {
                         if(packetSeqNum == expectedSeqNum) {
                             fos.write(packet.getPayload());
+                            lastDelivered = packetSeqNum;
                             expectedSeqNum = (expectedSeqNum + 1) % 128; // since it needs to wrap around
                         }
 
@@ -81,7 +81,8 @@ public class Receiver {
                         boolean shouldDropResult = ChaosEngine.shouldDrop(ackCount, rn);
 
                         if (!shouldDropResult) {
-                            DSPacket packetWithAck = new DSPacket(DSPacket.TYPE_ACK, packetSeqNum, null);
+                            ackCount++; // increase ack count only when an ack is sent
+                            DSPacket packetWithAck = new DSPacket(DSPacket.TYPE_ACK, lastDelivered, null);
                             byte [] dataBytes = packetWithAck.toBytes();
                             DatagramPacket ackDatagramPacket = new DatagramPacket(dataBytes, dataBytes.length, InetAddress.getByName(argv[0]), Integer.parseInt(argv[1]));
                             datagramSocket.send(ackDatagramPacket);
@@ -92,7 +93,7 @@ public class Receiver {
                         boolean shouldDropResult = ChaosEngine.shouldDrop(ackCount, rn);
 
                         if (!shouldDropResult) {
-                            DSPacket packetWithAck = new DSPacket(DSPacket.TYPE_ACK, packetSeqNum, null);
+                            DSPacket packetWithAck = new DSPacket(DSPacket.TYPE_ACK, lastDelivered, null);
                             byte [] dataBytes = packetWithAck.toBytes();
                             DatagramPacket ackDatagramPacket = new DatagramPacket(dataBytes, dataBytes.length, InetAddress.getByName(argv[0]), Integer.parseInt(argv[1]));
                             datagramSocket.send(ackDatagramPacket);
