@@ -1,1 +1,0 @@
-Hello Stop and Wait Protocol
