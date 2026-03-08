@@ -41,6 +41,8 @@ public class Sender {
                 while(!handshakeCompleted) {
                     datagramSocket.send(datagramForSot);
 
+                    System.out.println("Sender: Sent SOT with seqNum 0. Now waiting for ACK");
+
                     try {
                         byte[] buffer = new byte[128]; // since each UDP datagram should be 128 bytes
                         DatagramPacket dp = new DatagramPacket(buffer, buffer.length);
@@ -52,6 +54,7 @@ public class Sender {
 
                         if (packetType == DSPacket.TYPE_ACK && packetSeqNum == 0) {
                             handshakeCompleted = true;
+                            System.out.println("Sender: Successful handshake. Received ACK with seqNum 0");
                         }
                     } catch (SocketTimeoutException e) {
                         timeoutTimerHandshake++;
@@ -76,6 +79,8 @@ public class Sender {
                         byte[] packetBytes = packet.toBytes();
                         DatagramPacket sendingDatagramPacket = new DatagramPacket(packetBytes, packetBytes.length, InetAddress.getByName(argv[0]), Integer.parseInt(argv[1]));
 
+                        System.out.println("Sender: Sent data with seqNum " + expectedSeqNum + ". Now waiting for ACK");
+
                         // Now, wait for ack
                         boolean ackReceivedSuccessfully = false;
                         int timeoutTimer = 0;
@@ -95,6 +100,7 @@ public class Sender {
                                 if(ackPacketSeqNum == expectedSeqNum && ackPacketType == DSPacket.TYPE_ACK) {
                                     ackReceivedSuccessfully = true;
                                     expectedSeqNum = (expectedSeqNum + 1) % 128; // since it needs to wrap around
+                                    System.out.println("Receiver: Received ACK with seqNum " + ackPacketSeqNum);
                                 }
                             } catch (SocketTimeoutException e) {
                                 timeoutTimer++;
@@ -122,6 +128,8 @@ public class Sender {
 
                 while(!eotAckSuccessful) {
                     datagramSocket.send(datagramForEOT);
+
+                    System.out.println("Sender: Sent EOT with seqNum " + expectedSeqNum + ". Now waiting for ACK");
 
                     try {
                         byte[] bufferForEOT = new byte[128];

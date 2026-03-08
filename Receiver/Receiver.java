@@ -26,6 +26,7 @@ public class Receiver {
             System.err.println("Invalid port number: " + argv[2]);
             System.exit(1);
         }
+        System.out.println("Receiver started on port " + argv[2]);
 
         try {
             datagramSocket = new DatagramSocket(port);
@@ -44,6 +45,7 @@ public class Receiver {
 
                     if (packetType == DSPacket.TYPE_SOT && packetSeqNum == 0) {
                         DSPacket newPacket = new DSPacket(DSPacket.TYPE_ACK, 0, null);
+                        System.out.println("Receiver: Successful handshake. Received SOT with seqNum 0, sending ACK with seqNum 0");
 
                         // Checking if packet should be dropped with ChaosEngine
                         int rn = Integer.parseInt(argv[4]);
@@ -71,10 +73,16 @@ public class Receiver {
                     int packetSeqNum = packet.getSeqNum();
 
                     if (packetType == DSPacket.TYPE_DATA) {
+                        System.out.println("Receiver: Received data with seqNum " + packetSeqNum);
+
                         if(packetSeqNum == expectedSeqNum) {
                             fos.write(packet.getPayload());
                             lastDelivered = packetSeqNum;
                             expectedSeqNum = (expectedSeqNum + 1) % 128; // since it needs to wrap around
+
+                            System.out.println("Receiver: Acknowledging data with seqNum " + packetSeqNum);
+                        } else {
+                            System.out.println("Receiver: Packet is out of order with seqNum " + packetSeqNum + ". resending ACK for seqNum " + lastDelivered);
                         }
 
                         // Checking if packet should be dropped with ChaosEngine
@@ -89,6 +97,8 @@ public class Receiver {
                             datagramSocket.send(ackDatagramPacket);
                         }
                     } else if (packetType == DSPacket.TYPE_EOT) {
+                        System.out.println("Receiver: Received EOT with seqNum " + packetSeqNum + ". Sending ACK");
+
                         // Checking if packet should be dropped with ChaosEngine
                         int rn = Integer.parseInt(argv[4]);
                         boolean shouldDropResult = ChaosEngine.shouldDrop(ackCount, rn);
